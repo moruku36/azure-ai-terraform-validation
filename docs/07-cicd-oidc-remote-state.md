@@ -111,3 +111,5 @@ Client Secret、Storage Account Key、SAS、SSH秘密鍵は登録しない。
 
 - 人間介入: 12件のタグ修復applyを承認
 - AI自律実行: CIログ解析、原因特定、入力値共通化、planの変更範囲検査、apply、適用後plan確認
+
+修復内容をmainへ反映した後のGitHub Actionsでは、GitHub OIDCによるAzure login、Azure Blob Remote State初期化、Blob leaseによるstate lock、validate、plan、保存済みplanのapplyがすべて成功した。CIのplanは`No changes`、apply結果は0追加・0変更・0削除であり、ローカル実行とCI実行の入力値および実環境が一致したことを確認した。

@@ -24,5 +24,8 @@
 - main workflow: validate / plan / applyまで実行成功
 - CI入力差により12件の追加タグだけが削除されたが、入力値を共通化してタグだけを修復
 - 修復後のローカル`terraform plan`: `No changes`
+- 修復内容を反映したGitHub Actions: OIDC / Remote State / validate / plan / applyが成功
+- 修復後のCI `terraform plan`: `No changes`
+- 修復後のCI apply: 0追加・0変更・0削除
 
 以降、GitHub Actions CI/CD、Monitoring、障害試験、cleanupの結果を追記する。
