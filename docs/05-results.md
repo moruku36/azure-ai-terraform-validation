@@ -19,5 +19,10 @@
 - Remote State: Azure Blobへの移行成功
 - State locking: Blob leaseで競合拒否と解放後復旧を実動作確認
 - State移行後のroot plan: `No changes`
+- GitHub OIDC Azure login: 成功
+- GitHub Actions Remote State初期化: 成功
+- main workflow: validate / plan / applyまで実行成功
+- CI入力差により12件の追加タグだけが削除されたが、入力値を共通化してタグだけを修復
+- 修復後のローカル`terraform plan`: `No changes`
 
 以降、GitHub Actions CI/CD、Monitoring、障害試験、cleanupの結果を追記する。

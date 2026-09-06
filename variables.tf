@@ -91,5 +91,7 @@ variable "application_gateway_max_capacity" {
 variable "tags" {
   description = "Additional tags merged with the standard project tags."
   type        = map(string)
-  default     = {}
+  default = {
+    Purpose = "AI infrastructure validation"
+  }
 }

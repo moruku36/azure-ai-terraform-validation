@@ -95,3 +95,19 @@ Variables:
 - `SSH_PUBLIC_KEY`
 
 Client Secret、Storage Account Key、SAS、SSH秘密鍵は登録しない。
+
+## GitHub Actions実行結果（途中経過）
+
+- GitHub OIDC token取得: 成功
+- Entra Federated IdentityによるAzure login: 成功
+- Azure Blob Remote State初期化: 成功
+- `terraform validate`: 成功
+- main apply workflow: workflowとしては成功
+- 長期Credential / Client Secret / Storage Key / SAS: 不使用
+
+ただし初回成功runでは、ローカルだけに存在した追加タグ入力がCIへ渡らず、12リソースの`Purpose`タグがin-placeで削除された。削除・置換・ネットワーク・Identity・Monitoringの変更はなかった。
+
+再発防止として、公開可能な`Purpose`値をTerraform変数の既定値へ移し、ローカル実行とGitHub Actionsで同じ入力値を使うようにした。修復planが12件のin-place tag更新だけであることを機械的に確認し、人間の承認後に適用した。修復後のローカル`terraform plan`は`No changes`となった。
+
+- 人間介入: 12件のタグ修復applyを承認
+- AI自律実行: CIログ解析、原因特定、入力値共通化、planの変更範囲検査、apply、適用後plan確認
