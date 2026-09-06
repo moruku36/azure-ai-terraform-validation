@@ -49,5 +49,35 @@ Azure Portal/CLIから標準メトリクス、Alert history、Activity Logを確
 - ローカルplan: 12追加・0変更・0削除
 - plan検査: 既存リソースのupdate / replace / destroyなし
 - 追加内訳: Action Group 1、Metric Alert 7、Activity Log Alert 1、Diagnostic Setting 1、ログStorage 1、Lifecycle Policy 1
+- PR workflow: fmt / init / validate / GitHub OIDC / Remote State / planが成功
+- PR plan: 12追加・0変更・0削除、PRからapplyなし
+- main apply workflow: GitHub OIDCで12追加・0変更・0削除
+- apply後のローカルplan: `No changes`
 
-GitHub Actionsと障害試験の結果は実行後に追記する。
+## 障害試験
+
+2台のBackend VMのうち1台だけをdeallocateし、もう1台は稼働状態を維持した。
+
+| 確認項目 | 結果 |
+|---|---|
+| 停止前 | HTTP 200、Backend 2 Healthy / 0 Unhealthy |
+| 1台停止後 | HTTP 200、Backend 1 Healthy / 1 Unhealthy |
+| 停止操作 | Azure Activity Logへ記録 |
+| Metric Alert | HealthyからUnhealthy（Fired相当）へ遷移 |
+| VM再起動後 | HTTP 200、Backend 2 Healthy / 0 Unhealthy |
+| 復旧後メトリクス | `UnhealthyHostCount`が0へ復帰 |
+| Alert自動解消 | UnhealthyからHealthy（Resolved相当）へ遷移 |
+
+Health Probeは30秒間隔・3回失敗でBackend異常を判定する。Metric Alertは1分間隔・5分窓で評価するため、Backend healthの変化よりFired/Resolved表示が遅れるAzure固有の挙動を確認した。
+
+## 人間介入とAI自律判断
+
+- 人間介入: 監視追加と安全な障害試験を含む検証要件の提示
+- AI自律判断: Log Analyticsを不採用とし、専用Storage archiveを選択
+- AI自律実行: Terraform実装、静的検証、plan安全性検査、PR作成、CI確認、merge、apply監視、1台停止試験、復旧、Alert状態確認
+- 権限拡張: なし
+
+## 発生した問題
+
+- Windows上でAzure CLIのJMESPath式がコマンドシェルに解釈され、事前確認コマンドが失敗した。Azure側の変更は発生していない。JSONを取得してPowerShell側で絞り込む方式へ変更し、正常に確認できた。
+- Metric Alert作成には約2分、障害発生・復旧の状態反映には評価窓と追加の反映遅延があった。エラーではなくAzure Monitorの評価周期による挙動である。
