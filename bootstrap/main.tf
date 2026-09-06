@@ -8,6 +8,8 @@ locals {
     Component  = "bootstrap"
     Validation = "AI-Infrastructure"
   })
+
+  github_subject_repository = coalesce(var.github_subject_repository, var.github_repository)
 }
 
 data "azurerm_resource_group" "workload" {
@@ -78,7 +80,7 @@ resource "azurerm_federated_identity_credential" "github_pr" {
   user_assigned_identity_id = azurerm_user_assigned_identity.github_pr.id
   audience                  = ["api://AzureADTokenExchange"]
   issuer                    = "https://token.actions.githubusercontent.com"
-  subject                   = "repo:${var.github_repository}:pull_request"
+  subject                   = "repo:${local.github_subject_repository}:pull_request"
 }
 
 resource "azurerm_federated_identity_credential" "github_apply" {
@@ -86,7 +88,7 @@ resource "azurerm_federated_identity_credential" "github_apply" {
   user_assigned_identity_id = azurerm_user_assigned_identity.github_apply.id
   audience                  = ["api://AzureADTokenExchange"]
   issuer                    = "https://token.actions.githubusercontent.com"
-  subject                   = "repo:${var.github_repository}:environment:terraform-production"
+  subject                   = "repo:${local.github_subject_repository}:environment:terraform-production"
 }
 
 resource "azurerm_role_assignment" "github_pr_workload_reader" {
@@ -125,4 +127,3 @@ resource "azurerm_role_assignment" "local_state_migration" {
 
   description = "Temporary local-user data-plane access for State migration and final cleanup."
 }
-

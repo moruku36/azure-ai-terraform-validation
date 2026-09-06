@@ -62,3 +62,18 @@
 - 影響: OIDCテスト前に検出したため、GitHub ActionsやAzureリソースへの影響はない。
 - 修正: project専用CLI設定を明示し、Storage Account名は形式検証済みの単一値だけを抽出した。3変数を上書き後、警告文字列が全Variableから消えたことを画面上で検証した。
 - 区分: GitHubの本人確認だけ人間が承認し、原因特定・修正・再検証はAIが実施した。
+
+### GitHub OIDCのsubject形式が標準形と異なる
+
+- 症状: GitHub OIDC token取得後、Entra IDが`AADSTS700213`でFederated Credentialとのsubject不一致を返した。
+- 原因: 対象GitHubアカウントでは、subjectのrepository部分へ安定したOwner IDとRepository IDを付加するカスタマイズが有効だった。
+- 修正: 実測subjectのrepository部分をGit管理外の入力として受け取り、PR用とEnvironment用subjectを組み立てるbootstrap変数を追加した。
+- 安全性: issuerとaudience、repository、event種別の限定は維持し、RBACは変更していない。
+- 修正後の結果: GitHub ActionsからのAzure OIDC loginが成功した。
+
+### Remote State backendがCLI Service Principal認証を拒否
+
+- 症状: OIDC login成功後、`terraform init`がAzure CLIはUser認証だけをサポートするとして停止した。
+- 原因: root backendにローカル移行用の`use_cli = true`を固定していた。GitHubのAzure CLI sessionはFederated Service Principalである。
+- 修正: backend本体はMicrosoft Entra認証だけを固定し、ローカルではbackend既定のAzure CLIユーザー認証、GitHubでは`ARM_USE_OIDC=true`とOIDC用ARM環境変数を利用するよう分離した。
+- 安全性: Storage Key、SAS、Client Secretは追加しておらず、RBACも変更していない。

@@ -33,7 +33,7 @@ bootstrap planは12追加、0変更、0削除、置換0で、apply後のplanは`
 1. 移行先Containerが空であることをMicrosoft Entra認証で確認した。
 2. Local StateをGit管理対象外の`.state-backups/`へ複製した。
 3. 元StateとバックアップのサイズおよびSHA-256が一致することを確認した。
-4. backendを`azurerm`、`use_azuread_auth = true`、`use_cli = true`として設定した。
+4. backendを`azurerm`、`use_azuread_auth = true`として設定した。ローカルではAzure CLIユーザー認証を利用した。
 5. State Keyを`terraform/azure-validation.tfstate`に固定した。
 6. `terraform init -migrate-state -force-copy`でBlobへ移行した。
 7. 指定KeyにState Objectが1件存在することをMicrosoft Entra認証で確認した。
@@ -75,6 +75,7 @@ State移行時の一時RBACはCI/CD実動作確認後、cleanup対象として�
 - mainへのpushだけで起動する。
 - `terraform-production` GitHub Environmentを使用し、deploy元をmainだけに限定する。
 - apply用Managed IdentityでOIDC認証し、保存したplanファイルだけをapplyする。
+- GitHubでは`ARM_USE_OIDC=true`を用い、Remote StateとAzureRM ProviderをFederated Credentialで認証する。
 - workflow concurrencyを1本に限定し、Azure Blob leaseと併用して同時更新を防ぐ。
 
 ### GitHub上の設定名

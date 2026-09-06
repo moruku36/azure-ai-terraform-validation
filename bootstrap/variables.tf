@@ -49,6 +49,17 @@ variable "github_repository" {
   }
 }
 
+variable "github_subject_repository" {
+  description = "Repository component used in GitHub OIDC subjects. Set only when the organization customizes sub to include stable owner/repository IDs."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.github_subject_repository == null || can(regex("^[A-Za-z0-9_.@-]+/[A-Za-z0-9_.@-]+$", var.github_subject_repository))
+    error_message = "github_subject_repository must be null or an owner/repository subject component."
+  }
+}
+
 variable "soft_delete_retention_days" {
   description = "Retention for deleted State blobs and containers."
   type        = number
@@ -60,4 +71,3 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
-
