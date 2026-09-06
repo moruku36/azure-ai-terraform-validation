@@ -119,3 +119,29 @@ Client Secret、Storage Account Key、SAS、SSH秘密鍵は登録しない。
 cleanup完了後の文書更新でmain workflowが環境を再作成しないよう、cloud plan/apply jobへRepository Variable `AZURE_ENVIRONMENT_ACTIVE == 'true'`の条件を追加した。PRの静的fmt/init/validateは継続する。環境を再構築する場合だけVariableを明示的に`true`へ設定する。
 
 GitHub専用Secrets、Variables、`terraform-production` EnvironmentはAzure cleanup完了後の削除候補として扱う。自動削除は行わない。
+
+## Remote State / bootstrap cleanup結果
+
+- cleanup前root plan: `No changes`
+- cleanup前bootstrap plan: State内の実測OIDC subjectをメモリ上の一時入力として使用し`No changes`
+- State backup: Remote root stateとbootstrap local stateをGit管理対象外へ保存し、SHA-256を確認
+- root destroy: 41件削除、State 0件とworkload Resource GroupのNot Foundを確認
+- bootstrap destroy: 12件削除
+- Remote State Storage / Container: 削除
+- Managed Identity: 2件削除
+- Federated Identity Credential: 2件削除
+- Role Assignment: 5件削除、削除Identityに対する残存0
+- State Resource Group: Not Found
+
+root削除後、Remote State Blobが削除済みrootを表す最終Stateへ更新されたことを確認してからbootstrapを削除した。State Storage削除後にroot planを再実行することはbackend消失によりできないため、直前のState 0件とAzure Resource GroupのNot Foundを最終整合性証跡とした。
+
+## GitHub cleanup候補
+
+GitHub設定画面で次の名称が存在することを確認した。実値は取得・記録していない。再利用予定がなければ削除できるが、本検証ではユーザー要件に従い削除していない。
+
+- Repository Secrets: `AZURE_SUBSCRIPTION_ID`、`AZURE_TENANT_ID`、`AZURE_PR_CLIENT_ID`
+- Environment Secret: `AZURE_APPLY_CLIENT_ID`
+- Repository Variables: `TF_STATE_STORAGE_ACCOUNT`、`TF_STATE_RESOURCE_GROUP`、`TF_STATE_CONTAINER`、`SSH_PUBLIC_KEY`
+- Environment: `terraform-production`（main限定）
+
+`AZURE_ENVIRONMENT_ACTIVE`は設定されておらず、cloud plan/apply jobは停止状態である。Static PR checksは継続する。

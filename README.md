@@ -29,9 +29,11 @@ AWS編のサービス名を単純置換せず、Azure固有のネットワーク
 | Monitoring | Azure Monitor Alert、Action Group、診断ログをTerraform管理 |
 | 障害試験 | VM 1台停止を検知し、HTTP 200継続、復旧後Resolvedを確認 |
 | 最終整合性 | ローカル・GitHub Actionsとも`No changes` |
-| Cleanup | 実施中。完了後に結果を追記 |
+| Cleanup | root 41件、bootstrap 12件を削除し、対象リソース残存0を確認 |
 
 AIは設計、Terraform、CI/CD、OIDC、State移行、監視、障害試験、原因分析をほぼ一貫して実行できた。人間はSubscription指定、設計・権限承認、GitHub本人確認、破壊的操作の承認を担当した。
+
+Azure編は成功と評価する。クラウドエンジニアLevel 2相当の標準的なWeb基盤、CI/CD、Federation、State、Monitoring、障害試験、cleanupは、適切な安全境界と人間の承認があればAIへ大部分を委任できた。高権限、課金・公開方式、Account本人確認、最終destroyの責任は人間に残す。
 
 ## AWS編との主な違い
 

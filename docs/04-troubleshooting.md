@@ -87,3 +87,12 @@
 - 安全対応: 修復planが12件のin-place tag更新だけで、destroy / recreate、ネットワーク、Identity、Monitoringの変更を含まないことを確認してからapplyした。
 - 結果: 修復後のローカル`terraform plan`は`No changes`となり、実環境と構成の一致を確認した。
 - 区分: AIがworkflowログから差分を発見して原因を特定し、安全性を検証した。人間は修復applyを承認し、AIが適用と再確認を実施した。
+
+### Cleanup時のApplication Gateway削除伝播遅延
+
+- 症状: Application Gateway削除完了直後、GatewayManager許可NSG Ruleの削除が400で拒否された。
+- 原因: Azure側でApplication GatewayとSubnetの関連付け判定が一時的に残っていた。
+- 安全対応: 権限・NSG・Stateを手動変更せず停止し、Application Gatewayが0件であることと残存State 3件を確認した。
+- 修正: Azure側の削除反映を待ち、残存3件だけのdelete-only planを再生成して適用した。
+- 結果: NSG、Resource Groupを削除し、root state 0件とResource GroupのNot Foundを確認した。
+- 区分: AIが原因特定、残存境界確認、安全な再planと再実行を行った。権限追加なし。

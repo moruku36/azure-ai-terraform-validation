@@ -81,3 +81,7 @@ Health Probeは30秒間隔・3回失敗でBackend異常を判定する。Metric 
 
 - Windows上でAzure CLIのJMESPath式がコマンドシェルに解釈され、事前確認コマンドが失敗した。Azure側の変更は発生していない。JSONを取得してPowerShell側で絞り込む方式へ変更し、正常に確認できた。
 - Metric Alert作成には約2分、障害発生・復旧の状態反映には評価窓と追加の反映遅延があった。エラーではなくAzure Monitorの評価周期による挙動である。
+
+## Cleanup
+
+Diagnostic Setting、Metric Alert 7件、Activity Log Alert、Action Group、Monitoring用StorageとLifecycle Policyはroot Terraform destroyで削除した。cleanup後、検証用workload Resource Groupおよび検証タグ付き監視リソースが0であることをAzureから読み取り確認した。
