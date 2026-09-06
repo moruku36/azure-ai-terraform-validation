@@ -54,3 +54,11 @@
 - 修正: CLI更新や権限追加は行わず、Azure Resource Manager APIを読み取り専用で呼び出してissuer、audience、subjectを検証した。
 - 修正後の結果: PR用・apply用の2資格情報と、限定されたclaim条件を確認できた。
 - 区分: AIが互換性問題を自律回避。Azureリソース変更なし。
+
+### GitHub VariableへTerraform CLI警告が混入
+
+- 症状: State関連の3つのGitHub Variableに、期待値の前へローカルTerraform CLI設定ディレクトリのアクセス警告が含まれた。
+- 原因: `terraform output -raw`の標準出力と警告出力を結合した文字列を、そのままブラウザ入力へ渡した。
+- 影響: OIDCテスト前に検出したため、GitHub ActionsやAzureリソースへの影響はない。
+- 修正: project専用CLI設定を明示し、Storage Account名は形式検証済みの単一値だけを抽出した。3変数を上書き後、警告文字列が全Variableから消えたことを画面上で検証した。
+- 区分: GitHubの本人確認だけ人間が承認し、原因特定・修正・再検証はAIが実施した。

@@ -56,5 +56,41 @@ State移行時の一時RBACはCI/CD実動作確認後、cleanup対象として�
 
 ## 人間介入とAI自律実行
 
-- 人間介入: 使用Subscriptionの指定、public network endpointを利用する低コストState設計の承認
-- AI自律実行: bootstrap設計・実装、plan/apply、Storage security検証、Federation設定検証、Local Stateバックアップ、State移行、Blob lease試験、移行前後の整合性確認
+- 人間介入: 使用Subscriptionの指定、public network endpointを利用する低コストState設計の承認、GitHub設定変更とAzure識別子を暗号化Secretsとして登録する承認、GitHub Mobileによる本人確認
+- AI自律実行: bootstrap設計・実装、plan/apply、Storage security検証、Federation設定検証、Local Stateバックアップ、State移行、Blob lease試験、移行前後の整合性確認、GitHub repository・Environment・Secrets・Variables・workflowの設定
+
+## GitHub Actions設計
+
+### Pull Request
+
+- `static-checks`はAzure認証なし、`contents: read`だけで`fmt -check`、backend無効の`init`、`validate`を実行する。
+- `plan`は同一repository由来PRに限り実行し、job単位で`id-token: write`と`contents: read`を許可する。
+- PR用Managed Identityはworkload Resource GroupのReaderとState ContainerのBlob Data Readerだけを持つ。
+- 読み取り専用Identityのためplanは`-lock=false`とし、State Blobへの書込みを許可しない。
+- fork PRではAzure loginとcloud planを実行しない。
+- PRからapplyするstepは存在しない。
+
+### main apply
+
+- mainへのpushだけで起動する。
+- `terraform-production` GitHub Environmentを使用し、deploy元をmainだけに限定する。
+- apply用Managed IdentityでOIDC認証し、保存したplanファイルだけをapplyする。
+- workflow concurrencyを1本に限定し、Azure Blob leaseと併用して同時更新を防ぐ。
+
+### GitHub上の設定名
+
+暗号化Secrets:
+
+- `AZURE_SUBSCRIPTION_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_PR_CLIENT_ID`
+- `AZURE_APPLY_CLIENT_ID`（`terraform-production` Environment）
+
+Variables:
+
+- `TF_STATE_STORAGE_ACCOUNT`
+- `TF_STATE_RESOURCE_GROUP`
+- `TF_STATE_CONTAINER`
+- `SSH_PUBLIC_KEY`
+
+Client Secret、Storage Account Key、SAS、SSH秘密鍵は登録しない。
