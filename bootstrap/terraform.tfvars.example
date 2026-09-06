@@ -1,0 +1,12 @@
+location                     = "japaneast"
+workload_resource_group_name = "rg-aitev-dev"
+state_resource_group_name    = "rg-aitev-tfstate"
+storage_account_suffix       = "replace8"
+state_container_name         = "tfstate"
+state_key                    = "terraform/azure-validation.tfstate"
+github_repository            = "owner/azure-ai-terraform-validation"
+
+tags = {
+  Purpose = "Terraform State and GitHub OIDC bootstrap"
+}
+
