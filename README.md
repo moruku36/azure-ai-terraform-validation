@@ -17,6 +17,10 @@ AWS編のサービス名を単純置換せず、Azure固有のネットワーク
 - State: 初期構築はLocal State、後続フェーズでAzure Blobへ移行
 - Monitoring / CI/CD: 基盤疎通確認後に段階的に追加
 
+![Azure検証環境のアーキテクチャ構成図](docs/images/azure-architecture.png)
+
+構成要素と設計判断の詳細は[Azureアーキテクチャ](docs/02-architecture.md)を参照してください。
+
 ## 最終結果
 
 | 項目 | 結果 |
