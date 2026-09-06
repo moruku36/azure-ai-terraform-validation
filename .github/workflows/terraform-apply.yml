@@ -3,6 +3,7 @@ name: Terraform Apply
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: terraform-production
@@ -11,6 +12,7 @@ concurrency:
 jobs:
   apply:
     name: Plan and apply
+    if: vars.AZURE_ENVIRONMENT_ACTIVE == 'true'
     runs-on: ubuntu-latest
     environment: terraform-production
     permissions:

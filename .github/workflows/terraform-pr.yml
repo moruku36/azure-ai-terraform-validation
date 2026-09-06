@@ -34,7 +34,9 @@ jobs:
 
   plan:
     name: Azure plan
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.AZURE_ENVIRONMENT_ACTIVE == 'true'
     needs: static-checks
     runs-on: ubuntu-latest
     permissions:

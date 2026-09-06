@@ -113,3 +113,9 @@ Client Secret、Storage Account Key、SAS、SSH秘密鍵は登録しない。
 - AI自律実行: CIログ解析、原因特定、入力値共通化、planの変更範囲検査、apply、適用後plan確認
 
 修復内容をmainへ反映した後のGitHub Actionsでは、GitHub OIDCによるAzure login、Azure Blob Remote State初期化、Blob leaseによるstate lock、validate、plan、保存済みplanのapplyがすべて成功した。CIのplanは`No changes`、apply結果は0追加・0変更・0削除であり、ローカル実行とCI実行の入力値および実環境が一致したことを確認した。
+
+## Cleanup再作成防止
+
+cleanup完了後の文書更新でmain workflowが環境を再作成しないよう、cloud plan/apply jobへRepository Variable `AZURE_ENVIRONMENT_ACTIVE == 'true'`の条件を追加した。PRの静的fmt/init/validateは継続する。環境を再構築する場合だけVariableを明示的に`true`へ設定する。
+
+GitHub専用Secrets、Variables、`terraform-production` EnvironmentはAzure cleanup完了後の削除候補として扱う。自動削除は行わない。

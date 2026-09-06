@@ -17,17 +17,29 @@ AWS編のサービス名を単純置換せず、Azure固有のネットワーク
 - State: 初期構築はLocal State、後続フェーズでAzure Blobへ移行
 - Monitoring / CI/CD: 基盤疎通確認後に段階的に追加
 
-## 現在の進捗
+## 最終結果
 
-- [x] ローカルCLI・Azureログイン・Subscription・Region確認
-- [x] Azureアーキテクチャと概算コストのレビュー
-- [x] Terraform基盤コード作成
-- [x] `terraform init / validate / plan`（30追加、0変更、0削除、置換なし）
-- [ ] Web基盤apply・HTTP 200確認
-- [ ] Remote State移行
-- [ ] GitHub OIDC CI/CD
-- [ ] Monitoring・障害試験
-- [ ] AWS比較・最終cleanup
+| 項目 | 結果 |
+|---|---|
+| Terraform Web基盤 | Private VM 2台、Application Gateway経由HTTP 200 |
+| CI/CD | PRのfmt/init/validate/plan、mainの保存plan applyに成功 |
+| Identity | GitHub OIDC + Entra Federated Identity。Client Secret不使用 |
+| Remote State | Azure Blobへ移行、暗号化・Versioning・Soft Deleteを有効化 |
+| State locking | Blob leaseによる競合拒否と解放後復旧を実証 |
+| Monitoring | Azure Monitor Alert、Action Group、診断ログをTerraform管理 |
+| 障害試験 | VM 1台停止を検知し、HTTP 200継続、復旧後Resolvedを確認 |
+| 最終整合性 | ローカル・GitHub Actionsとも`No changes` |
+| Cleanup | 実施中。完了後に結果を追記 |
+
+AIは設計、Terraform、CI/CD、OIDC、State移行、監視、障害試験、原因分析をほぼ一貫して実行できた。人間はSubscription指定、設計・権限承認、GitHub本人確認、破壊的操作の承認を担当した。
+
+## AWS編との主な違い
+
+- Application Gatewayは専用Subnetを必要とし、Private VMの明示的outboundにNAT Gatewayを採用した。
+- Entra Federated CredentialとAzure RBACは、AWS IAM Trust PolicyとPermission PolicyよりIdentity・Federation・Scopeの役割が分離している。
+- Azure Blob BackendはState Blob自体のleaseでlockingし、AWS編のS3 native lockfileとは方式が異なる。
+- 監視ログはLog AnalyticsのProvider登録と取り込み費用を避け、専用Storage archiveを採用した。
+- Resource Groupを明確な作成・cleanup境界として利用できる。
 
 ## Terraform実行方法
 
@@ -44,6 +56,8 @@ terraform plan -out=tfplan
 terraform apply tfplan
 terraform output -raw application_url
 ```
+
+GitHub cloud plan/applyはRepository Variable `AZURE_ENVIRONMENT_ACTIVE=true`の場合だけ実行する。cleanup後は未設定または`false`にし、文書更新による意図しない再作成を防止する。
 
 ## ドキュメント
 
