@@ -95,3 +95,21 @@ variable "tags" {
     Purpose = "AI infrastructure validation"
   }
 }
+
+variable "monitoring_log_retention_days" {
+  description = "Days to retain Application Gateway diagnostic logs in Azure Storage."
+  type        = number
+  default     = 30
+}
+
+variable "vm_cpu_threshold_percent" {
+  description = "Average VM CPU percentage that triggers an alert."
+  type        = number
+  default     = 80
+}
+
+variable "http_5xx_threshold" {
+  description = "Maximum tolerated Application Gateway HTTP 5xx responses per five-minute window."
+  type        = number
+  default     = 5
+}
