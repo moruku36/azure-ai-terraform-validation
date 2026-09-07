@@ -13,6 +13,45 @@
 
 GitHub-hosted runnerを維持するためStorage public network endpointは到達可能とするが、匿名public access、Shared Key認証、container public accessは禁止する。
 
+## OIDC認証・Blob Lease排他制御フロー
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Developer
+    participant GH as GitHub Actions Runner
+    participant OIDC as GitHub OIDC Token Service
+    participant Entra as Microsoft Entra ID
+    participant MI as Managed Identity (PR / Apply)
+    participant Blob as Azure Blob Storage (tfstate)
+    participant ARM as Azure Resource Manager
+
+    Note over Dev,GH: PR 作成時 (PR Workflow)
+    Dev->>GH: Pull Request オープン
+    GH->>OIDC: ID Token 要求 (aud: api://AzureADTokenExchange)
+    OIDC-->>GH: 短期 JWT (sub: ...:pull_request)
+    GH->>Entra: Federated Credential 検証 & トークン要求
+    Entra->>MI: PR用 Managed Identity (Reader 権限) とバインド
+    Entra-->>GH: Azure Access Token 発行
+    GH->>Blob: -lock=false で State 読取 (Blob Data Reader)
+    GH->>ARM: Read-only ARM API 呼出 (terraform plan)
+    GH-->>Dev: PRコメントに差分表示
+
+    Note over Dev,GH: main マージ時 (Apply Workflow)
+    Dev->>GH: main ブランチへマージ (Environment: terraform-production)
+    GH->>OIDC: ID Token 要求
+    OIDC-->>GH: 短期 JWT (sub: ...:environment:terraform-production)
+    GH->>Entra: Federated Credential 検証
+    Entra->>MI: Apply用 Managed Identity (Contributor 権限) とバインド
+    Entra-->>GH: Azure Access Token 発行
+    GH->>Blob: Blob Lease 取得要求 (State 排他ロック)
+    Blob-->>GH: 60秒 Lease 獲得 (競合時は他プロセスを拒否)
+    GH->>ARM: terraform apply (リソース作成・更新)
+    GH->>Blob: 更新後 tfstate アップロード
+    GH->>Blob: Blob Lease 解放 (ロック解除)
+    GH-->>Dev: Apply 完了通知
+```
+
 ## Bootstrap実装結果
 
 専用Resource Group内に次をTerraformで作成した。

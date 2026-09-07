@@ -8,6 +8,18 @@
 
 AWS編のサービス名を単純置換せず、Azure固有のネットワーク、Microsoft Entra ID、Azure RBAC、Blob lease locking、Azure Monitorの設計判断を記録する。
 
+## 検証ライフサイクルフロー
+
+```mermaid
+flowchart LR
+    P1["Phase 1: Bootstrap<br/>(Blob State & Entra ID)"] --> P2["Phase 2: Core Web<br/>(VNet, AppGW, VMs, NAT)"]
+    P2 --> P3["Phase 3: State Migration<br/>(Blob Lease Lock)"]
+    P3 --> P4["Phase 4: CI/CD Pipeline<br/>(GitHub OIDC + Entra)"]
+    P4 --> P5["Phase 5: Monitoring<br/>(Azure Monitor & Alerts)"]
+    P5 --> P6["Phase 6: Chaos Test<br/>(VM Deallocate)"]
+    P6 --> P7["Phase 7: Clean Destroy<br/>(0 Remaining)"]
+```
+
 ## アーキテクチャ概要
 
 - Region: Japan East
@@ -21,9 +33,76 @@ AWS編のサービス名を単純置換せず、Azure固有のネットワーク
 
 ![Azure検証環境のアーキテクチャ構成図](docs/images/azure-architecture.png)
 
+```mermaid
+flowchart TB
+    Client((Internet Client))
+
+    subgraph GitHub["GitHub Ecosystem"]
+        GHA["GitHub Actions Runner<br/>(PR Plan / Main Apply)"]
+    end
+
+    subgraph Azure["Microsoft Azure / Japan East"]
+        subgraph Bootstrap["Bootstrap & ID Federation"]
+            Entra["Microsoft Entra ID<br/>Federated Identity Credential"]
+            MI_PR["Managed Identity (PR)<br/>Reader + Blob Data Reader"]
+            MI_Apply["Managed Identity (Apply)<br/>Contributor + Blob Data Contributor"]
+            BlobState["Azure Blob Storage<br/>(Blob Lease Locking)"]
+        end
+
+        subgraph RG["Resource Group: rg-workload"]
+            subgraph VNet["Virtual Network (10.1.0.0/16)"]
+                subgraph Subnet_AG["AppGateway Subnet (10.1.1.0/24)"]
+                    AppGW["Application Gateway Standard_v2<br/>HTTP :80 (Public IP)"]
+                end
+
+                subgraph Subnet_VM["Private Backend Subnet (10.1.2.0/24)"]
+                    VM1["VM Web #1 (Zone 1)<br/>Ubuntu 24.04 + Nginx<br/>No Public IP"]
+                    VM2["VM Web #2 (Zone 2)<br/>Ubuntu 24.04 + Nginx<br/>No Public IP"]
+                    NSG["NSG: Inbound Allow AppGW Subnet:80 only<br/>Deny All Direct Internet"]
+                end
+
+                NATGW["NAT Gateway + Public IP<br/>(Egress TCP 80/443 only)"]
+            end
+
+            subgraph Observability["Monitoring & Diagnostics"]
+                Monitor["Azure Monitor Alerts (7件)<br/>+ Activity Log Alert<br/>+ Action Group"]
+                DiagStore["Storage Account<br/>AppGW Access Logs (30d Lifecycle)"]
+            end
+        end
+    end
+
+    Client -->|"HTTP :80"| AppGW
+    AppGW -->|"HTTP :80 (NSG許可)"| VM1
+    AppGW -->|"HTTP :80 (NSG許可)"| VM2
+    VM1 --> NATGW
+    VM2 --> NATGW
+
+    AppGW -. 診断ログ配信 .-> DiagStore
+    AppGW -. メトリクス .-> Monitor
+    VM1 -. メトリクス/Availability .-> Monitor
+    VM2 -. メトリクス/Availability .-> Monitor
+
+    GHA -->|"OIDC (api://AzureADTokenExchange)"| Entra
+    Entra --> MI_PR & MI_Apply
+    MI_Apply --> BlobState
+    MI_Apply -->|"ARM IaC Apply"| RG
+```
+
 構成要素と設計判断の詳細は[Azureアーキテクチャ](docs/02-architecture.md)を参照してください。
 
-## 最終結果
+## 最終結果サマリー
+
+### 定量評価指標
+
+| 評価指標 | 実績値 / 状況 | ビジュアル指標 |
+|---|---|---|
+| **総合評価** | **成功（Level 2自律達成）** | `██████████ 100%` |
+| **HTTP 200 可用性** | 障害試験中も無停止 | `██████████ 100%` |
+| **Root リソース完全削除** | 41 / 41 削除完了 | `██████████ 100%` |
+| **Bootstrap 完全削除** | 12 / 12 削除完了 | `██████████ 100%` |
+| **環境残存リソース** | 0 件 | `░░░░░░░░░░ 0 件` |
+
+### 検証項目別ステータス
 
 | 項目 | 結果 |
 |---|---|

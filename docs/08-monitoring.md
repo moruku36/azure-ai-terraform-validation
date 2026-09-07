@@ -10,6 +10,52 @@ Log Analyticsは今回不採用とした。対象Subscriptionでは必要なReso
 
 ## 監視項目
 
+```mermaid
+flowchart LR
+    subgraph DataSources["監視データソース"]
+        AppGW["Application Gateway Standard_v2"]
+        VMs["Backend VMs (Zone 1 & Zone 2)"]
+        ActLog["Subscription Activity Log"]
+    end
+
+    subgraph Metrics["Azure Monitor シグナル"]
+        M1["HealthyHostCount"]
+        M2["UnhealthyHostCount"]
+        M3["ResponseStatus (5xx)"]
+        M4["Percentage CPU (per VM)"]
+        M5["VmAvailabilityMetric (per VM)"]
+        M6["Microsoft.Compute/virtualMachines/deallocate"]
+    end
+
+    subgraph Alerts["Azure Monitor Alert Rules (計8件)"]
+        A1["Web停止 (Sev 1 / <1)"]
+        A2["Backend異常 (Sev 2 / >0)"]
+        A3["HTTP 5xx (Sev 2 / >5)"]
+        A4["VM CPU高負荷 x2 (Sev 2 / >80%)"]
+        A5["VM可用性低下 x2 (Sev 1 / <1)"]
+        A6["Activity Log Alert (VM停止操作)"]
+    end
+
+    subgraph Handlers["アクション & ログ"]
+        AG["Action Group<br/>(通知基盤連携)"]
+        DiagStorage["Storage Account<br/>(AppGW Access Logs 30日)"]
+    end
+
+    AppGW --> M1 & M2 & M3
+    VMs --> M4 & M5
+    ActLog --> M6
+    AppGW -.->|"アクセスログ"| DiagStorage
+
+    M1 --> A1
+    M2 --> A2
+    M3 --> A3
+    M4 --> A4
+    M5 --> A5
+    M6 --> A6
+
+    A1 & A2 & A3 & A4 & A5 & A6 --> AG
+```
+
 | 対象 | シグナル | 条件 | 期間 | 重大度 |
 |---|---|---:|---:|---:|
 | Web停止 | `HealthyHostCount` | 1未満 | 5分 | 1 |
@@ -55,6 +101,41 @@ Azure Portal/CLIから標準メトリクス、Alert history、Activity Logを確
 - apply後のローカルplan: `No changes`
 
 ## 障害試験
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Tester as 検証者 (AI/Human)
+    participant AGW as Application Gateway
+    participant VM1 as VM Web #1 (Zone 1)
+    participant VM2 as VM Web #2 (Zone 2)
+    participant AM as Azure Monitor (Alerts/Metrics)
+    actor Client as 外部クライアント (curl)
+
+    Note over VM1,VM2: 正常運用 (両Zone健全)
+    Client->>AGW: HTTP GET /
+    AGW->>VM1: ルーティング
+    AGW-->>Client: HTTP 200 OK (2 Healthy / 0 Unhealthy)
+
+    Note over Tester,VM1: 障害注入 (VM #1 を deallocate)
+    Tester->>VM1: az vm deallocate
+    VM1-->>VM1: 停止・割当解除
+    AGW->>VM1: Health Probe (30秒毎 x 3回連続失敗)
+    AGW-->>AGW: VM1 を Backend pool から除外 (UnhealthyHostCount = 1)
+    AM-->>AM: Metric Alert 発報 (Unhealthy 検出 / Fired)
+
+    Note over Client,AGW: サービス無停止確認
+    Client->>AGW: HTTP GET /
+    AGW->>VM2: 稼働中の VM2 へトラフィック転送
+    AGW-->>Client: HTTP 200 OK (無停止継続)
+
+    Note over Tester,VM1: 復旧フェーズ (VM #1 起動)
+    Tester->>VM1: az vm start
+    VM1-->>VM1: OS & Nginx 起動完了
+    AGW->>VM1: Health Probe (HTTP 200 応答受信)
+    AGW-->>AGW: VM1 を Backend pool に復帰 (HealthyHostCount = 2)
+    AM-->>AM: 5分評価窓経過後に Alert 自動解消 (Resolved)
+```
 
 2台のBackend VMのうち1台だけをdeallocateし、もう1台は稼働状態を維持した。
 
