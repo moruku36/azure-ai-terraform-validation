@@ -1,5 +1,7 @@
 # Azure AI Terraform Validation
 
+**[AWS / Azure / GCP 横断・最終比較レポート](docs/10-multi-cloud-final-report.md)** — 実行結果、AIの失敗と復旧、人間の責任、再現性レビュー。
+
 ## 検証目的
 
 自然言語の共通要件から、AI/CodexがAzureネイティブな構成を設計し、Terraform、GitHub Actions、Workload Identity Federation、Remote State、Monitoring、障害試験、cleanupまで自律実装できるかを検証する。
